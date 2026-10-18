@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nino09 Stats</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nino09">
+<meta name="theme-color" content="#141B34">
+<style>
+:root{--bg:#141B34;--card:#1D2647;--line:#2B3768;--tx:#EEF0FF;--mute:#9AA3CF;--yt:#FF6B6B;--tt:#3DE0D0;--up:#7CF0A4;--dn:#FFB36B}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 ui-rounded,"SF Pro Rounded",system-ui,sans-serif;padding:max(20px,env(safe-area-inset-top)) 18px max(28px,env(safe-area-inset-bottom))}
+main{max-width:520px;margin:0 auto}
+h1{font-size:28px;margin:0 0 2px}
+.sub{color:var(--mute);margin:0 0 22px}
+section{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;margin-bottom:16px}
+h2{font-size:18px;margin:0 0 12px}
+.yt{border-left:5px solid var(--yt)}.tt{border-left:5px solid var(--tt)}
+.row{display:flex;gap:10px}.row>div{flex:1}
+.lbl{color:var(--mute);font-size:13px}
+.big{font-size:26px;font-weight:700;line-height:1.15}
+.d{font-size:13px}.d.p{color:var(--up)}.d.n{color:var(--dn)}
+svg{width:100%;height:90px;margin-top:12px}
+input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:12px;color:var(--tx);font:inherit;padding:10px}
+button{background:var(--tt);color:#06201D;border:0;border-radius:14px;padding:12px 16px;font:inherit;font-weight:700;width:100%;margin-top:12px}
+button.alt{background:transparent;color:var(--tx);border:1px solid var(--line)}
+textarea{width:100%;height:90px;background:var(--bg);color:var(--mute);border:1px solid var(--line);border-radius:12px;padding:10px;font:12px ui-monospace,monospace;margin-top:10px}
+#msg{color:var(--mute);font-size:14px;margin:10px 0 0}
+</style>
+</head>
+<body><main>
+<h1>Nino09</h1>
+<p class="sub" id="upd">Andamento dei tuoi canali</p>
+
+<section class="yt"><h2>YouTube</h2>
+<div class="row"><div><div class="lbl">Iscritti</div><div class="big" id="ys">–</div><div class="d" id="ysd"></div></div>
+<div><div class="lbl">Visualizzazioni</div><div class="big" id="yv">–</div><div class="d" id="yvd"></div></div>
+<div><div class="lbl">Like</div><div class="big" id="yl">–</div><div class="d" id="yld"></div></div></div>
+<svg id="chart" viewBox="0 0 300 90" preserveAspectRatio="none"></svg>
+<div class="lbl" id="cl">Iscritti per settimana</div></section>
+
+<section class="tt"><h2>TikTok</h2>
+<div class="row"><div><div class="lbl">Follower</div><input id="tf" type="number" inputmode="numeric"></div>
+<div><div class="lbl">Like</div><input id="tl" type="number" inputmode="numeric"></div>
+<div><div class="lbl">Views</div><input id="tv" type="number" inputmode="numeric"></div></div>
+<div class="d" id="ttd" style="margin-top:8px;color:var(--mute)"></div>
+<button id="tsave">Salva numeri TikTok</button></section>
+
+<section><h2>Notifiche</h2>
+<div class="lbl">Ogni lunedì alle 21:00. Funziona solo dall'app aggiunta alla Home.</div>
+<button id="en">Attiva notifiche</button>
+<textarea id="subbox" readonly placeholder="Qui comparirà il codice da incollare nei Secrets di GitHub"></textarea>
+<button class="alt" id="cp">Copia codice</button>
+<p id="msg"></p></section>
+</main>
+<script>
+const VAPID_PUBLIC="BINjJDYrP5V_rr5nPfa0e31n5tkVds52jdlD4iUthMyIzk7RNA7zNsrHCZkDh-QMcXlWe9aA3XowGVTUkwfhuSY";
+const $=s=>document.querySelector(s), fmt=n=>Number(n).toLocaleString('it-IT');
+const delta=(el,a,b)=>{if(b==null){el.textContent='';return}const d=a-b;el.textContent=(d>=0?'+':'')+fmt(d)+' sett.';el.className='d '+(d>=0?'p':'n')};
+const say=t=>$('#msg').textContent=t;
+
+async function init(){
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+  let h=[];try{h=await (await fetch('data/history.json',{cache:'no-store'})).json()}catch(_){}
+  if(h.length){
+    const l=h[h.length-1],p=h[h.length-2];
+    $('#ys').textContent=fmt(l.subs);$('#yv').textContent=fmt(l.views);$('#yl').textContent=fmt(l.likes);
+    delta($('#ysd'),l.subs,p&&p.subs);delta($('#yvd'),l.views,p&&p.views);delta($('#yld'),l.likes,p&&p.likes);
+    $('#upd').textContent='Ultimo aggiornamento: '+l.date;
+    const v=h.map(x=>x.subs),mn=Math.min(...v),mx=Math.max(...v),r=(mx-mn)||1;
+    const pts=v.map((y,i)=>(v.length>1?i/(v.length-1)*300:150)+','+(80-(y-mn)/r*70)).join(' ');
+    $('#chart').innerHTML='<polyline fill="none" stroke="#FF6B6B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="'+pts+'"/>';
+  }else $('#cl').textContent='Nessun dato ancora: parte dopo il primo invio del lunedì.';
+  const tt=JSON.parse(localStorage.getItem('tt')||'[]'),t=tt[tt.length-1],tp=tt[tt.length-2];
+  if(t){$('#tf').value=t.f;$('#tl').value=t.l;$('#tv').value=t.v;
+    $('#ttd').textContent='Salvato il '+t.date+(tp?' · follower '+(t.f-tp.f>=0?'+':'')+fmt(t.f-tp.f):'')}
+}
+$('#tsave').onclick=()=>{
+  const tt=JSON.parse(localStorage.getItem('tt')||'[]');
+  tt.push({date:new Date().toLocaleDateString('it-IT'),f:+$('#tf').value||0,l:+$('#tl').value||0,v:+$('#tv').value||0});
+  localStorage.setItem('tt',JSON.stringify(tt));init();
+};
+const key=b=>{const s=(b+'='.repeat((4-b.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/');return Uint8Array.from(atob(s),c=>c.charCodeAt(0))};
+$('#en').onclick=async()=>{
+  if(!('PushManager' in window)){say("Prima aggiungi l'app alla Home (Condividi → Aggiungi a Home) e riaprila da lì.");return}
+  if(await Notification.requestPermission()!=='granted'){say('Permesso negato. Puoi riattivarlo da Impostazioni → Notifiche → Nino09.');return}
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key(VAPID_PUBLIC)});
+    $('#subbox').value=JSON.stringify(sub);say('Notifiche attive. Copia il codice e salvalo su GitHub come PUSH_SUBSCRIPTION.');
+  }catch(e){say('Errore: '+e.message)}
+};
+$('#cp').onclick=async()=>{try{await navigator.clipboard.writeText($('#subbox').value);say('Codice copiato.')}catch(_){$('#subbox').select();say('Tieni premuto sul testo e scegli Copia.')}};
+init();
+</script></body></html>
